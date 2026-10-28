@@ -77,10 +77,486 @@
     <div class="dashboard-header" id="dashboard-title-wrapper">
         <span>
             <span style="color: #fff; margin: 0 0 5px 0; font-size: 28px; font-weight: bold;">Market Analysis Dashboard </span>
-            <span style="color: #c3a533;">&nbsp;&nbsp;&nbsp;2026-10-27 01:00:08</span>
+            <span style="color: #c3a533;">&nbsp;&nbsp;&nbsp;2026-10-28 01:00:08</span>
         </span>
         <p style="color: #787b86; margin: 0;">Scroll down or use the dashboard shortcut bar to navigate technical trends.</p>
     </div>
+
+
+    <div class="grid-wrapper">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0;">🌀 Relative Rotation Graph (RRG® Matrix)</h3>
+        <div>
+            <label for="rrg-timeframe" style="font-size: 13px; color: #787b86; margin-right: 8px;">Timeframe:</label>
+            <select id="rrg-timeframe" onchange="updateRrgTimeframe(this.value)" style="background: #1c2030; color: #fff; border: 1px solid #2b2b3a; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                <option value="days">Daily</option>
+                <option value="weeks" selected>Weekly</option>
+                <option value="months">Monthly</option>
+            </select>
+        </div>
+    </div>
+    
+    <div style="display: flex; gap: 20px; align-items: flex-start;">
+        <div style="position: relative; background: #131722; border-radius: 8px; border: 1px solid #1e222d; padding: 10px;">
+            <canvas id="rrgCanvas" width="600" height="500" style="display: block; cursor: crosshair;"></canvas>
+        </div>
+        
+        <div style="flex-grow: 1; background: #131722; border: 1px solid #1e222d; border-radius: 8px; padding: 15px; height: 500px; box-sizing: border-box; display: flex; flex-direction: column;">
+            <h4 style="margin: 0 0 12px 0; color: #fff; font-weight: 500; font-size: 15px;">Quadrant Legend & Guides</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; margin-bottom: 15px;">
+                <div style="background: rgba(38, 166, 154, 0.1); border-left: 4px solid #26a69a; padding: 8px; border-radius: 2px;"><b style="color: #26a69a;">LEADING (Top-Right)</b><br>Strong relative strength & positive momentum. Outperforming.</div>
+                <div style="background: rgba(255, 202, 40, 0.1); border-left: 4px solid #ffca28; padding: 8px; border-radius: 2px;"><b style="color: #ffca28;">WEAKENING (Bottom-Right)</b><br>Strong relative strength losing velocity. Pausing.</div>
+                <div style="background: rgba(239, 83, 80, 0.1); border-left: 4px solid #ef5350; padding: 8px; border-radius: 2px;"><b style="color: #ef5350;">LAGGING (Bottom-Left)</b><br>Poor relative strength & negative momentum. Underperforming.</div>
+                <div style="background: rgba(33, 150, 243, 0.1); border-left: 4px solid #2196f3; padding: 8px; border-radius: 2px;"><b style="color: #2196f3;">IMPROVING (Top-Left)</b><br>Poor relative strength turning upward. Accumulating.</div>
+            </div>
+            <div style="color: #787b86; font-size: 12px; line-height: 1.5; border-top: 1px solid #2b2b3a; padding-top: 12px;">
+                <b>Mathematical Core:</b> Calculated as trend and velocity differentials against the benchmark <b>^GSPC</b>. Assets cycle counter-clockwise through the matrix. Trailing lines represent historical 5-period coordinates leading to current market paths.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const rrgDataPool = {
+        days: {},
+        weeks: {},
+        months: {}
+    };
+        rrgDataPool.days['XLK'] = [
+            { ratio: 104.47, momentum: 97.26 },
+            { ratio: 103.10, momentum: 95.43 },
+            { ratio: 101.65, momentum: 95.15 },
+            { ratio: 99.80, momentum: 93.85 },
+            { ratio: 98.68, momentum: 96.25 },
+            { ratio: 97.61, momentum: 96.44 },
+            { ratio: 97.17, momentum: 98.55 },
+            { ratio: 96.12, momentum: 96.48 },
+            { ratio: 95.68, momentum: 98.54 },
+            { ratio: 95.73, momentum: 100.17 },
+            { ratio: 96.21, momentum: 101.60 },
+        ];
+        rrgDataPool.weeks['XLK'] = [
+            { ratio: 114.10, momentum: 100.39 },
+            { ratio: 112.45, momentum: 94.50 },
+            { ratio: 112.13, momentum: 98.93 },
+            { ratio: 112.06, momentum: 99.78 },
+            { ratio: 111.47, momentum: 98.05 },
+            { ratio: 112.45, momentum: 103.27 },
+            { ratio: 113.18, momentum: 102.41 },
+            { ratio: 114.28, momentum: 103.67 },
+            { ratio: 113.96, momentum: 98.92 },
+            { ratio: 111.93, momentum: 93.26 },
+            { ratio: 110.93, momentum: 96.67 },
+        ];
+        rrgDataPool.months['XLK'] = [
+            { ratio: 109.08, momentum: 102.42 },
+            { ratio: 109.72, momentum: 102.16 },
+            { ratio: 108.71, momentum: 96.61 },
+            { ratio: 107.79, momentum: 96.95 },
+            { ratio: 109.97, momentum: 107.26 },
+            { ratio: 115.93, momentum: 119.87 },
+            { ratio: 120.60, momentum: 115.57 },
+            { ratio: 120.40, momentum: 99.32 },
+            { ratio: 122.62, momentum: 107.40 },
+            { ratio: 125.48, momentum: 109.54 },
+            { ratio: 126.12, momentum: 102.13 },
+        ];
+        rrgDataPool.days['XLF'] = [
+            { ratio: 93.26, momentum: 101.84 },
+            { ratio: 93.97, momentum: 102.37 },
+            { ratio: 94.97, momentum: 103.34 },
+            { ratio: 96.38, momentum: 104.70 },
+            { ratio: 97.07, momentum: 102.31 },
+            { ratio: 97.98, momentum: 103.02 },
+            { ratio: 98.71, momentum: 102.43 },
+            { ratio: 100.14, momentum: 104.76 },
+            { ratio: 100.95, momentum: 102.71 },
+            { ratio: 101.40, momentum: 101.50 },
+            { ratio: 101.43, momentum: 100.10 },
+        ];
+        rrgDataPool.weeks['XLF'] = [
+            { ratio: 98.27, momentum: 101.20 },
+            { ratio: 99.41, momentum: 103.80 },
+            { ratio: 99.83, momentum: 101.39 },
+            { ratio: 99.96, momentum: 100.44 },
+            { ratio: 100.20, momentum: 100.78 },
+            { ratio: 98.27, momentum: 93.57 },
+            { ratio: 96.68, momentum: 94.71 },
+            { ratio: 94.81, momentum: 93.76 },
+            { ratio: 93.96, momentum: 97.16 },
+            { ratio: 94.35, momentum: 101.32 },
+            { ratio: 94.78, momentum: 101.43 },
+        ];
+        rrgDataPool.months['XLF'] = [
+            { ratio: 94.45, momentum: 98.77 },
+            { ratio: 92.26, momentum: 92.70 },
+            { ratio: 90.62, momentum: 94.55 },
+            { ratio: 89.01, momentum: 94.63 },
+            { ratio: 86.74, momentum: 92.42 },
+            { ratio: 82.82, momentum: 86.94 },
+            { ratio: 81.93, momentum: 97.03 },
+            { ratio: 83.90, momentum: 106.56 },
+            { ratio: 84.40, momentum: 101.68 },
+            { ratio: 82.91, momentum: 95.04 },
+            { ratio: 82.78, momentum: 99.57 },
+        ];
+        rrgDataPool.days['XLV'] = [
+            { ratio: 98.52, momentum: 99.96 },
+            { ratio: 99.84, momentum: 104.41 },
+            { ratio: 101.44, momentum: 105.31 },
+            { ratio: 102.97, momentum: 105.10 },
+            { ratio: 103.75, momentum: 102.61 },
+            { ratio: 105.08, momentum: 104.43 },
+            { ratio: 105.66, momentum: 101.93 },
+            { ratio: 106.98, momentum: 104.40 },
+            { ratio: 107.70, momentum: 102.39 },
+            { ratio: 107.91, momentum: 100.71 },
+            { ratio: 107.75, momentum: 99.45 },
+        ];
+        rrgDataPool.weeks['XLV'] = [
+            { ratio: 99.04, momentum: 101.96 },
+            { ratio: 101.62, momentum: 108.59 },
+            { ratio: 102.54, momentum: 103.07 },
+            { ratio: 102.56, momentum: 100.05 },
+            { ratio: 103.07, momentum: 101.71 },
+            { ratio: 103.07, momentum: 100.00 },
+            { ratio: 103.66, momentum: 101.95 },
+            { ratio: 102.61, momentum: 96.52 },
+            { ratio: 102.36, momentum: 99.18 },
+            { ratio: 104.74, momentum: 107.91 },
+            { ratio: 106.34, momentum: 105.33 },
+        ];
+        rrgDataPool.months['XLV'] = [
+            { ratio: 88.37, momentum: 102.63 },
+            { ratio: 88.80, momentum: 101.44 },
+            { ratio: 90.08, momentum: 104.25 },
+            { ratio: 90.73, momentum: 102.17 },
+            { ratio: 87.58, momentum: 89.52 },
+            { ratio: 84.87, momentum: 90.96 },
+            { ratio: 85.60, momentum: 102.41 },
+            { ratio: 88.16, momentum: 108.54 },
+            { ratio: 89.44, momentum: 104.27 },
+            { ratio: 90.72, momentum: 104.26 },
+            { ratio: 93.31, momentum: 108.62 },
+        ];
+        rrgDataPool.days['XLC'] = [
+            { ratio: 97.11, momentum: 100.89 },
+            { ratio: 97.29, momentum: 100.57 },
+            { ratio: 97.86, momentum: 101.90 },
+            { ratio: 98.04, momentum: 100.61 },
+            { ratio: 97.98, momentum: 99.81 },
+            { ratio: 97.89, momentum: 99.70 },
+            { ratio: 97.25, momentum: 97.85 },
+            { ratio: 96.69, momentum: 98.15 },
+            { ratio: 95.85, momentum: 97.18 },
+            { ratio: 94.43, momentum: 95.29 },
+            { ratio: 93.08, momentum: 95.50 },
+        ];
+        rrgDataPool.weeks['XLC'] = [
+            { ratio: 82.13, momentum: 99.09 },
+            { ratio: 82.99, momentum: 102.87 },
+            { ratio: 83.43, momentum: 101.47 },
+            { ratio: 84.04, momentum: 102.02 },
+            { ratio: 85.90, momentum: 106.21 },
+            { ratio: 86.53, momentum: 102.09 },
+            { ratio: 86.95, momentum: 101.41 },
+            { ratio: 86.81, momentum: 99.54 },
+            { ratio: 87.10, momentum: 100.97 },
+            { ratio: 87.23, momentum: 100.44 },
+            { ratio: 85.31, momentum: 93.59 },
+        ];
+        rrgDataPool.months['XLC'] = [
+            { ratio: 104.53, momentum: 99.00 },
+            { ratio: 103.64, momentum: 97.04 },
+            { ratio: 103.21, momentum: 98.55 },
+            { ratio: 102.65, momentum: 98.13 },
+            { ratio: 100.91, momentum: 94.23 },
+            { ratio: 97.84, momentum: 89.76 },
+            { ratio: 93.40, momentum: 85.19 },
+            { ratio: 90.96, momentum: 91.89 },
+            { ratio: 87.87, momentum: 89.68 },
+            { ratio: 85.66, momentum: 92.63 },
+            { ratio: 81.59, momentum: 86.43 },
+        ];
+        rrgDataPool.days['XLY'] = [
+            { ratio: 96.04, momentum: 101.45 },
+            { ratio: 96.55, momentum: 101.70 },
+            { ratio: 97.48, momentum: 103.12 },
+            { ratio: 98.34, momentum: 102.85 },
+            { ratio: 99.52, momentum: 103.95 },
+            { ratio: 100.68, momentum: 103.86 },
+            { ratio: 101.37, momentum: 102.31 },
+            { ratio: 102.18, momentum: 102.68 },
+            { ratio: 102.36, momentum: 100.61 },
+            { ratio: 102.60, momentum: 100.78 },
+            { ratio: 102.91, momentum: 101.04 },
+        ];
+        rrgDataPool.weeks['XLY'] = [
+            { ratio: 86.85, momentum: 98.87 },
+            { ratio: 87.61, momentum: 102.54 },
+            { ratio: 87.68, momentum: 100.23 },
+            { ratio: 87.14, momentum: 98.19 },
+            { ratio: 86.29, momentum: 97.17 },
+            { ratio: 85.41, momentum: 97.07 },
+            { ratio: 84.30, momentum: 96.30 },
+            { ratio: 83.73, momentum: 98.09 },
+            { ratio: 83.70, momentum: 99.92 },
+            { ratio: 85.26, momentum: 105.20 },
+            { ratio: 86.59, momentum: 104.43 },
+        ];
+        rrgDataPool.months['XLY'] = [
+            { ratio: 95.72, momentum: 100.24 },
+            { ratio: 95.62, momentum: 99.65 },
+            { ratio: 94.29, momentum: 95.57 },
+            { ratio: 92.59, momentum: 94.32 },
+            { ratio: 90.90, momentum: 94.38 },
+            { ratio: 89.13, momentum: 94.11 },
+            { ratio: 87.00, momentum: 92.91 },
+            { ratio: 84.41, momentum: 91.34 },
+            { ratio: 81.91, momentum: 91.69 },
+            { ratio: 78.33, momentum: 88.05 },
+            { ratio: 77.38, momentum: 96.84 },
+        ];
+        rrgDataPool.days['XLP'] = [
+            { ratio: 97.00, momentum: 102.57 },
+            { ratio: 98.86, momentum: 106.18 },
+            { ratio: 100.46, momentum: 105.35 },
+            { ratio: 102.52, momentum: 106.86 },
+            { ratio: 103.76, momentum: 104.14 },
+            { ratio: 104.80, momentum: 103.48 },
+            { ratio: 105.08, momentum: 100.92 },
+            { ratio: 106.89, momentum: 106.04 },
+            { ratio: 107.69, momentum: 102.64 },
+            { ratio: 107.83, momentum: 100.49 },
+            { ratio: 107.30, momentum: 98.24 },
+        ];
+        rrgDataPool.weeks['XLP'] = [
+            { ratio: 90.13, momentum: 98.13 },
+            { ratio: 91.37, momentum: 104.12 },
+            { ratio: 91.26, momentum: 99.63 },
+            { ratio: 90.92, momentum: 98.89 },
+            { ratio: 91.05, momentum: 100.40 },
+            { ratio: 90.01, momentum: 96.54 },
+            { ratio: 89.34, momentum: 97.79 },
+            { ratio: 88.25, momentum: 96.36 },
+            { ratio: 88.58, momentum: 101.09 },
+            { ratio: 90.90, momentum: 107.73 },
+            { ratio: 92.52, momentum: 105.39 },
+        ];
+        rrgDataPool.months['XLP'] = [
+            { ratio: 82.52, momentum: 90.25 },
+            { ratio: 82.23, momentum: 99.05 },
+            { ratio: 84.93, momentum: 108.98 },
+            { ratio: 87.15, momentum: 107.41 },
+            { ratio: 85.58, momentum: 94.78 },
+            { ratio: 83.10, momentum: 91.72 },
+            { ratio: 81.81, momentum: 95.71 },
+            { ratio: 82.77, momentum: 103.19 },
+            { ratio: 80.92, momentum: 93.82 },
+            { ratio: 78.73, momentum: 92.71 },
+            { ratio: 78.97, momentum: 100.80 },
+        ];
+        rrgDataPool.days['XLE'] = [
+            { ratio: 103.02, momentum: 104.85 },
+            { ratio: 104.77, momentum: 105.83 },
+            { ratio: 105.37, momentum: 101.97 },
+            { ratio: 107.10, momentum: 105.77 },
+            { ratio: 107.96, momentum: 102.88 },
+            { ratio: 108.53, momentum: 101.88 },
+            { ratio: 108.76, momentum: 100.76 },
+            { ratio: 108.96, momentum: 100.67 },
+            { ratio: 110.15, momentum: 103.99 },
+            { ratio: 110.86, momentum: 102.37 },
+            { ratio: 110.31, momentum: 98.15 },
+        ];
+        rrgDataPool.weeks['XLE'] = [
+            { ratio: 103.06, momentum: 105.70 },
+            { ratio: 105.12, momentum: 106.86 },
+            { ratio: 107.00, momentum: 106.25 },
+            { ratio: 108.90, momentum: 106.35 },
+            { ratio: 111.38, momentum: 108.27 },
+            { ratio: 109.91, momentum: 95.08 },
+            { ratio: 108.93, momentum: 96.75 },
+            { ratio: 108.65, momentum: 99.06 },
+            { ratio: 110.35, momentum: 105.65 },
+            { ratio: 112.42, momentum: 106.91 },
+            { ratio: 113.95, momentum: 105.10 },
+        ];
+        rrgDataPool.months['XLE'] = [
+            { ratio: 75.47, momentum: 93.52 },
+            { ratio: 77.84, momentum: 107.88 },
+            { ratio: 84.23, momentum: 121.31 },
+            { ratio: 98.33, momentum: 147.00 },
+            { ratio: 100.89, momentum: 108.52 },
+            { ratio: 100.27, momentum: 97.93 },
+            { ratio: 98.22, momentum: 93.19 },
+            { ratio: 100.49, momentum: 107.57 },
+            { ratio: 102.44, momentum: 106.50 },
+            { ratio: 104.04, momentum: 105.34 },
+            { ratio: 108.67, momentum: 115.41 },
+        ];
+        rrgDataPool.days['XLI'] = [
+            { ratio: 94.01, momentum: 100.23 },
+            { ratio: 94.18, momentum: 100.58 },
+            { ratio: 94.45, momentum: 100.89 },
+            { ratio: 95.09, momentum: 102.13 },
+            { ratio: 95.27, momentum: 100.59 },
+            { ratio: 95.39, momentum: 100.39 },
+            { ratio: 95.65, momentum: 100.87 },
+            { ratio: 96.00, momentum: 101.17 },
+            { ratio: 96.05, momentum: 100.17 },
+            { ratio: 96.39, momentum: 101.14 },
+            { ratio: 96.69, momentum: 101.00 },
+        ];
+        rrgDataPool.weeks['XLI'] = [
+            { ratio: 100.86, momentum: 99.68 },
+            { ratio: 99.78, momentum: 96.40 },
+            { ratio: 98.02, momentum: 94.14 },
+            { ratio: 96.57, momentum: 95.17 },
+            { ratio: 94.74, momentum: 93.91 },
+            { ratio: 92.85, momentum: 93.67 },
+            { ratio: 91.61, momentum: 95.87 },
+            { ratio: 90.55, momentum: 96.49 },
+            { ratio: 89.29, momentum: 95.80 },
+            { ratio: 88.44, momentum: 97.15 },
+            { ratio: 88.07, momentum: 98.78 },
+        ];
+        rrgDataPool.months['XLI'] = [
+            { ratio: 97.21, momentum: 97.98 },
+            { ratio: 98.21, momentum: 103.33 },
+            { ratio: 101.96, momentum: 112.50 },
+            { ratio: 103.96, momentum: 106.67 },
+            { ratio: 103.90, momentum: 99.78 },
+            { ratio: 102.33, momentum: 94.78 },
+            { ratio: 103.47, momentum: 103.81 },
+            { ratio: 103.70, momentum: 100.74 },
+            { ratio: 102.29, momentum: 95.32 },
+            { ratio: 99.40, momentum: 90.34 },
+            { ratio: 96.77, momentum: 91.23 },
+        ];
+        rrgDataPool.days['XLB'] = [
+            { ratio: 93.18, momentum: 101.68 },
+            { ratio: 94.02, momentum: 102.79 },
+            { ratio: 95.27, momentum: 104.17 },
+            { ratio: 96.97, momentum: 105.66 },
+            { ratio: 98.20, momentum: 104.11 },
+            { ratio: 99.28, momentum: 103.60 },
+            { ratio: 99.98, momentum: 102.35 },
+            { ratio: 101.24, momentum: 104.20 },
+            { ratio: 102.13, momentum: 102.96 },
+            { ratio: 102.60, momentum: 101.55 },
+            { ratio: 102.99, momentum: 101.33 },
+        ];
+        rrgDataPool.weeks['XLB'] = [
+            { ratio: 94.13, momentum: 98.91 },
+            { ratio: 95.27, momentum: 103.82 },
+            { ratio: 95.46, momentum: 100.63 },
+            { ratio: 95.21, momentum: 99.16 },
+            { ratio: 94.64, momentum: 98.10 },
+            { ratio: 93.30, momentum: 95.54 },
+            { ratio: 91.75, momentum: 94.82 },
+            { ratio: 90.39, momentum: 95.47 },
+            { ratio: 89.47, momentum: 96.93 },
+            { ratio: 90.33, momentum: 102.88 },
+            { ratio: 91.46, momentum: 103.75 },
+        ];
+        rrgDataPool.months['XLB'] = [
+            { ratio: 81.26, momentum: 96.74 },
+            { ratio: 83.49, momentum: 107.45 },
+            { ratio: 88.01, momentum: 115.06 },
+            { ratio: 91.71, momentum: 112.32 },
+            { ratio: 92.31, momentum: 102.00 },
+            { ratio: 90.82, momentum: 95.03 },
+            { ratio: 89.83, momentum: 96.70 },
+            { ratio: 90.49, momentum: 102.20 },
+            { ratio: 90.17, momentum: 98.93 },
+            { ratio: 87.73, momentum: 91.89 },
+            { ratio: 87.31, momentum: 98.58 },
+        ];
+        rrgDataPool.days['XLRE'] = [
+            { ratio: 91.73, momentum: 102.72 },
+            { ratio: 92.57, momentum: 102.80 },
+            { ratio: 93.63, momentum: 103.53 },
+            { ratio: 95.08, momentum: 104.84 },
+            { ratio: 95.70, momentum: 102.06 },
+            { ratio: 96.74, momentum: 103.48 },
+            { ratio: 97.12, momentum: 101.24 },
+            { ratio: 98.28, momentum: 103.87 },
+            { ratio: 99.44, momentum: 103.87 },
+            { ratio: 100.29, momentum: 102.85 },
+            { ratio: 100.43, momentum: 100.48 },
+        ];
+        rrgDataPool.weeks['XLRE'] = [
+            { ratio: 93.94, momentum: 97.51 },
+            { ratio: 94.24, momentum: 100.98 },
+            { ratio: 93.42, momentum: 97.27 },
+            { ratio: 92.73, momentum: 97.72 },
+            { ratio: 92.01, momentum: 97.59 },
+            { ratio: 90.26, momentum: 94.19 },
+            { ratio: 88.46, momentum: 93.98 },
+            { ratio: 86.31, momentum: 92.83 },
+            { ratio: 85.39, momentum: 96.95 },
+            { ratio: 85.70, momentum: 101.00 },
+            { ratio: 86.09, momentum: 101.32 },
+        ];
+        rrgDataPool.months['XLRE'] = [
+            { ratio: 79.24, momentum: 89.28 },
+            { ratio: 77.29, momentum: 93.51 },
+            { ratio: 78.22, momentum: 103.10 },
+            { ratio: 79.01, momentum: 102.62 },
+            { ratio: 79.12, momentum: 100.37 },
+            { ratio: 77.85, momentum: 95.76 },
+            { ratio: 78.01, momentum: 100.54 },
+            { ratio: 79.77, momentum: 105.87 },
+            { ratio: 78.48, momentum: 95.69 },
+            { ratio: 75.35, momentum: 89.58 },
+            { ratio: 73.76, momentum: 94.70 },
+        ];
+        rrgDataPool.days['XLU'] = [
+            { ratio: 95.44, momentum: 103.76 },
+            { ratio: 96.65, momentum: 104.04 },
+            { ratio: 97.46, momentum: 102.69 },
+            { ratio: 99.01, momentum: 105.18 },
+            { ratio: 99.34, momentum: 101.10 },
+            { ratio: 99.96, momentum: 102.06 },
+            { ratio: 100.34, momentum: 101.26 },
+            { ratio: 101.83, momentum: 104.96 },
+            { ratio: 102.89, momentum: 103.54 },
+            { ratio: 103.42, momentum: 101.77 },
+            { ratio: 103.83, momentum: 101.38 },
+        ];
+        rrgDataPool.weeks['XLU'] = [
+            { ratio: 86.30, momentum: 97.07 },
+            { ratio: 85.41, momentum: 97.02 },
+            { ratio: 83.92, momentum: 95.04 },
+            { ratio: 83.94, momentum: 100.06 },
+            { ratio: 82.79, momentum: 96.18 },
+            { ratio: 80.64, momentum: 92.81 },
+            { ratio: 78.84, momentum: 94.00 },
+            { ratio: 78.18, momentum: 97.80 },
+            { ratio: 78.53, momentum: 101.17 },
+            { ratio: 79.46, momentum: 103.11 },
+            { ratio: 81.19, momentum: 105.76 },
+        ];
+        rrgDataPool.months['XLU'] = [
+            { ratio: 94.68, momentum: 91.70 },
+            { ratio: 93.02, momentum: 94.48 },
+            { ratio: 95.11, momentum: 106.95 },
+            { ratio: 98.57, momentum: 111.54 },
+            { ratio: 97.63, momentum: 96.86 },
+            { ratio: 93.76, momentum: 87.10 },
+            { ratio: 92.32, momentum: 95.20 },
+            { ratio: 91.00, momentum: 95.61 },
+            { ratio: 86.93, momentum: 86.43 },
+            { ratio: 81.03, momentum: 80.33 },
+            { ratio: 79.06, momentum: 93.44 },
+        ];
+        rrgDataPool.days['scaling'] = { minScale: 90.00, maxScale: 110.00 };
+        rrgDataPool.weeks['scaling'] = { minScale: 70.00, maxScale: 130.00 };
+        rrgDataPool.months['scaling'] = { minScale: 70.00, maxScale: 130.00 };
+    </script>
+
+
 
     <!-- PLACED NEW SECTOR BREADTH GRID COMPONENT HERE -->
     <div class="grid-wrapper">
@@ -97,9 +573,9 @@
             <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(204 Stocks)</span>
         </div>
         <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 49%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">49%</div>
-            <div style="width: 12%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">12%</div>
-            <div style="width: 39%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">39%</div>
+            <div style="width: 48%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">48%</div>
+            <div style="width: 14%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">14%</div>
+            <div style="width: 38%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">38%</div>
         </div>
     </div>
     <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
@@ -108,9 +584,20 @@
             <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(453 Stocks)</span>
         </div>
         <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 42%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">42%</div>
+            <div style="width: 45%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">45%</div>
             <div style="width: 12%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">12%</div>
-            <div style="width: 46%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">46%</div>
+            <div style="width: 43%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">43%</div>
+        </div>
+    </div>
+    <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
+        <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
+            <b style="color: #fff;">Healthcare</b> 
+            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(431 Stocks)</span>
+        </div>
+        <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+            <div style="width: 39%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">39%</div>
+            <div style="width: 16%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">16%</div>
+            <div style="width: 45%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">45%</div>
         </div>
     </div>
     <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
@@ -119,42 +606,9 @@
             <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(158 Stocks)</span>
         </div>
         <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 41%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">41%</div>
-            <div style="width: 7%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">7%</div>
-            <div style="width: 53%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">53%</div>
-        </div>
-    </div>
-    <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
-        <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
-            <b style="color: #fff;">Healthcare</b> 
-            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(430 Stocks)</span>
-        </div>
-        <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 38%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">38%</div>
-            <div style="width: 14%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">14%</div>
-            <div style="width: 48%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">48%</div>
-        </div>
-    </div>
-    <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
-        <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
-            <b style="color: #fff;">Consumer Cyclical</b> 
-            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(372 Stocks)</span>
-        </div>
-        <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 29%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">29%</div>
+            <div style="width: 37%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">37%</div>
             <div style="width: 9%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">9%</div>
-            <div style="width: 62%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">62%</div>
-        </div>
-    </div>
-    <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
-        <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
-            <b style="color: #fff;">Industrials</b> 
-            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(466 Stocks)</span>
-        </div>
-        <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 24%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">24%</div>
-            <div style="width: 11%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">11%</div>
-            <div style="width: 65%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">65%</div>
+            <div style="width: 54%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">54%</div>
         </div>
     </div>
     <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
@@ -163,20 +617,42 @@
             <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(106 Stocks)</span>
         </div>
         <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 24%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">24%</div>
+            <div style="width: 30%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">30%</div>
             <div style="width: 4%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">4%</div>
-            <div style="width: 73%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">73%</div>
+            <div style="width: 66%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">66%</div>
+        </div>
+    </div>
+    <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
+        <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
+            <b style="color: #fff;">Consumer Cyclical</b> 
+            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(371 Stocks)</span>
+        </div>
+        <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+            <div style="width: 29%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">29%</div>
+            <div style="width: 10%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">10%</div>
+            <div style="width: 61%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">61%</div>
+        </div>
+    </div>
+    <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
+        <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
+            <b style="color: #fff;">Industrials</b> 
+            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(466 Stocks)</span>
+        </div>
+        <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+            <div style="width: 26%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">26%</div>
+            <div style="width: 10%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">10%</div>
+            <div style="width: 64%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">64%</div>
         </div>
     </div>
     <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
         <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
             <b style="color: #fff;">Financial Services</b> 
-            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(1120 Stocks)</span>
+            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(1121 Stocks)</span>
         </div>
         <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
             <div style="width: 22%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">22%</div>
-            <div style="width: 11%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">11%</div>
-            <div style="width: 67%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">67%</div>
+            <div style="width: 12%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">12%</div>
+            <div style="width: 66%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">66%</div>
         </div>
     </div>
     <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
@@ -185,9 +661,20 @@
             <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(169 Stocks)</span>
         </div>
         <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 20%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">20%</div>
-            <div style="width: 15%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">15%</div>
+            <div style="width: 21%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">21%</div>
+            <div style="width: 14%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">14%</div>
             <div style="width: 65%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">65%</div>
+        </div>
+    </div>
+    <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
+        <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
+            <b style="color: #fff;">Basic Materials</b> 
+            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(172 Stocks)</span>
+        </div>
+        <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+            <div style="width: 18%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">18%</div>
+            <div style="width: 13%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">13%</div>
+            <div style="width: 69%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">69%</div>
         </div>
     </div>
     <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
@@ -198,18 +685,7 @@
         <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
             <div style="width: 14%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">14%</div>
             <div style="width: 6%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">6%</div>
-            <div style="width: 80%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">80%</div>
-        </div>
-    </div>
-    <div class="sector-row" style="display: flex; align-items: center; margin-bottom: 15px; font-size: 14px;">
-        <div class="sector-label" style="width: 280px; padding-right: 15px; box-sizing: border-box;">
-            <b style="color: #fff;">Basic Materials</b> 
-            <span style="color: #787b86; font-size: 12px; margin-left: 5px;">(172 Stocks)</span>
-        </div>
-        <div class="stacked-bar-track" style="flex-grow: 1; display: flex; height: 24px; border-radius: 4px; overflow: hidden; background-color: #1e222d; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div style="width: 13%; background-color: #26a69a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">13%</div>
-            <div style="width: 14%; background-color: #ffca28; color: #131722; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 0 0 1px rgba(255,255,255,0.5);">14%</div>
-            <div style="width: 73%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">73%</div>
+            <div style="width: 81%; background-color: #ef5350; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">81%</div>
         </div>
     </div>
 </div></div>
@@ -234,123 +710,123 @@
             <tbody>
                 <tr onclick="window.location='#wrapper-XLK';">
     <td class="ticker-cell"><b>XLK</b></td>
-    <td>$186.32</td>
-    <td class="sma50-text">$189.57</td>
-    <td class="sma200-text">$168.71</td>
-    <td>7,350,000</td>
-    <td><span class="rsi-badge ">43.86</span></td>
-    <td>0.21</td>
-    <td>0.17</td>
+    <td>$189.49</td>
+    <td class="sma50-text">$189.55</td>
+    <td class="sma200-text">$168.93</td>
+    <td>7,712,700</td>
+    <td><span class="rsi-badge ">49.08</span></td>
+    <td>0.39</td>
+    <td>0.28</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLF';">
     <td class="ticker-cell"><b>XLF</b></td>
-    <td>$56.02</td>
-    <td class="sma50-text">$56.03</td>
+    <td>$55.88</td>
+    <td class="sma50-text">$56.00</td>
     <td class="sma200-text">$53.69</td>
-    <td>23,031,900</td>
-    <td><span class="rsi-badge ">56.03</span></td>
-    <td>0.82</td>
-    <td>0.87</td>
+    <td>27,229,800</td>
+    <td><span class="rsi-badge ">54.54</span></td>
+    <td>0.73</td>
+    <td>0.80</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLV';">
     <td class="ticker-cell"><b>XLV</b></td>
-    <td>$179.28</td>
-    <td class="sma50-text">$171.36</td>
-    <td class="sma200-text">$158.18</td>
-    <td>7,815,600</td>
-    <td><span class="rsi-badge ">64.01</span></td>
-    <td>0.79</td>
-    <td>0.85</td>
+    <td>$179.18</td>
+    <td class="sma50-text">$171.60</td>
+    <td class="sma200-text">$158.29</td>
+    <td>7,831,300</td>
+    <td><span class="rsi-badge ">63.70</span></td>
+    <td>0.75</td>
+    <td>0.80</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLC';">
     <td class="ticker-cell"><b>XLC</b></td>
-    <td>$103.85</td>
-    <td class="sma50-text">$111.42</td>
-    <td class="sma200-text">$113.21</td>
-    <td>9,375,500</td>
-    <td><span class="rsi-badge rsi-oversold">29.53</span></td>
-    <td>0.02</td>
-    <td>0.06</td>
+    <td>$103.58</td>
+    <td class="sma50-text">$111.28</td>
+    <td class="sma200-text">$113.14</td>
+    <td>7,405,100</td>
+    <td><span class="rsi-badge rsi-oversold">29.01</span></td>
+    <td>0.01</td>
+    <td>0.04</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLY';">
     <td class="ticker-cell"><b>XLY</b></td>
-    <td>$114.26</td>
-    <td class="sma50-text">$113.36</td>
-    <td class="sma200-text">$115.72</td>
-    <td>6,756,400</td>
-    <td><span class="rsi-badge ">55.32</span></td>
-    <td>0.54</td>
+    <td>$115.45</td>
+    <td class="sma50-text">$113.33</td>
+    <td class="sma200-text">$115.67</td>
+    <td>5,892,400</td>
+    <td><span class="rsi-badge ">59.32</span></td>
+    <td>0.66</td>
     <td>0.65</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLP';">
     <td class="ticker-cell"><b>XLP</b></td>
-    <td>$87.96</td>
-    <td class="sma50-text">$84.42</td>
-    <td class="sma200-text">$84.32</td>
-    <td>13,641,700</td>
-    <td><span class="rsi-badge ">62.25</span></td>
-    <td>0.71</td>
-    <td>0.79</td>
+    <td>$87.15</td>
+    <td class="sma50-text">$84.47</td>
+    <td class="sma200-text">$84.36</td>
+    <td>12,845,800</td>
+    <td><span class="rsi-badge ">57.94</span></td>
+    <td>0.44</td>
+    <td>0.62</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLE';">
     <td class="ticker-cell"><b>XLE</b></td>
-    <td>$69.64</td>
-    <td class="sma50-text">$64.49</td>
-    <td class="sma200-text">$58.30</td>
-    <td>32,304,500</td>
-    <td><span class="rsi-badge rsi-overbought">70.35</span></td>
-    <td>0.88</td>
-    <td>0.83</td>
+    <td>$68.21</td>
+    <td class="sma50-text">$64.61</td>
+    <td class="sma200-text">$58.40</td>
+    <td>31,600,200</td>
+    <td><span class="rsi-badge ">60.88</span></td>
+    <td>0.44</td>
+    <td>0.63</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLI';">
     <td class="ticker-cell"><b>XLI</b></td>
-    <td>$166.96</td>
-    <td class="sma50-text">$171.85</td>
-    <td class="sma200-text">$173.20</td>
-    <td>6,706,300</td>
-    <td><span class="rsi-badge ">43.94</span></td>
-    <td>0.52</td>
-    <td>0.39</td>
+    <td>$167.92</td>
+    <td class="sma50-text">$171.48</td>
+    <td class="sma200-text">$173.23</td>
+    <td>6,284,300</td>
+    <td><span class="rsi-badge ">47.11</span></td>
+    <td>0.76</td>
+    <td>0.57</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLB';">
     <td class="ticker-cell"><b>XLB</b></td>
-    <td>$51.38</td>
-    <td class="sma50-text">$50.99</td>
-    <td class="sma200-text">$51.00</td>
-    <td>9,512,200</td>
-    <td><span class="rsi-badge ">60.13</span></td>
-    <td>0.86</td>
-    <td>0.90</td>
+    <td>$51.78</td>
+    <td class="sma50-text">$50.98</td>
+    <td class="sma200-text">$51.02</td>
+    <td>11,536,100</td>
+    <td><span class="rsi-badge ">63.67</span></td>
+    <td>0.91</td>
+    <td>0.91</td>
     <td>Neutral</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLRE';">
     <td class="ticker-cell"><b>XLRE</b></td>
-    <td>$42.80</td>
-    <td class="sma50-text">$42.83</td>
-    <td class="sma200-text">$43.30</td>
-    <td>9,322,000</td>
-    <td><span class="rsi-badge ">57.82</span></td>
-    <td>0.99</td>
-    <td>0.98</td>
-    <td>Neutral</td>
+    <td>$42.44</td>
+    <td class="sma50-text">$42.78</td>
+    <td class="sma200-text">$43.31</td>
+    <td>7,226,000</td>
+    <td><span class="rsi-badge ">53.20</span></td>
+    <td>0.91</td>
+    <td>0.94</td>
+    <td>Strong_Sell_Divergence</td>
 </tr>
 <tr onclick="window.location='#wrapper-XLU';">
     <td class="ticker-cell"><b>XLU</b></td>
-    <td>$42.55</td>
-    <td class="sma50-text">$41.83</td>
+    <td>$42.85</td>
+    <td class="sma50-text">$41.81</td>
     <td class="sma200-text">$44.30</td>
-    <td>13,968,200</td>
-    <td><span class="rsi-badge ">59.73</span></td>
-    <td>0.77</td>
-    <td>0.81</td>
+    <td>16,929,800</td>
+    <td><span class="rsi-badge ">62.23</span></td>
+    <td>0.84</td>
+    <td>0.82</td>
     <td>Neutral</td>
 </tr>
 
@@ -1030,6 +1506,7 @@ candle_XLK.setData([ { time: '2024-10-28', open: 115.97000122070312, high: 115.9
 { time: '2026-10-22', open: 184.92999267578125, high: 185.49000549316406, low: 181.5, close: 182.33999633789062 },
 { time: '2026-10-23', open: 181.82000732421875, high: 184.4199981689453, low: 181.5500030517578, close: 183.22999572753906 },
 { time: '2026-10-26', open: 184.11000061035156, high: 186.99000549316406, low: 183.39999389648438, close: 186.32000732421875 },
+{ time: '2026-10-27', open: 187.57000732421875, high: 190.10000610351562, low: 187.10000610351562, close: 189.49000549316406 },
  ]);
 
 const sma50_XLK = chart_XLK.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -1484,6 +1961,7 @@ sma50_XLK.setData([ { time: '2025-01-08', value: 117.28 },
 { time: '2026-10-22', value: 189.79 },
 { time: '2026-10-23', value: 189.64 },
 { time: '2026-10-26', value: 189.57 },
+{ time: '2026-10-27', value: 189.55 },
  ]);
 
 const sma200_XLK = chart_XLK.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -1788,6 +2266,7 @@ sma200_XLK.setData([ { time: '2025-08-15', value: 116.3 },
 { time: '2026-10-22', value: 168.32 },
 { time: '2026-10-23', value: 168.5 },
 { time: '2026-10-26', value: 168.71 },
+{ time: '2026-10-27', value: 168.93 },
  ]);
 
 const volume_XLK = chart_XLK.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -2292,6 +2771,7 @@ volume_XLK.setData([ { time: '2024-10-28', value: 5899200, color: '#ef5350' },
 { time: '2026-10-22', value: 12113300, color: '#ef5350' },
 { time: '2026-10-23', value: 7434000, color: '#26a69a' },
 { time: '2026-10-26', value: 7350000, color: '#26a69a' },
+{ time: '2026-10-27', value: 7712700, color: '#26a69a' },
  ]);
 
 const rsi_XLK = chart_XLK.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -2785,6 +3265,7 @@ rsi_XLK.setData([ { time: '2024-11-15', value: 48.06 },
 { time: '2026-10-22', value: 36.36 },
 { time: '2026-10-23', value: 38.11 },
 { time: '2026-10-26', value: 43.86 },
+{ time: '2026-10-27', value: 49.08 },
  ]);
 rsi_XLK.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLK.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -3355,6 +3836,7 @@ candle_XLF.setData([ { time: '2024-10-28', open: 46.869998931884766, high: 47.25
 { time: '2026-10-22', open: 55.83000183105469, high: 56.66999816894531, low: 55.81999969482422, close: 56.650001525878906 },
 { time: '2026-10-23', open: 56.189998626708984, high: 56.349998474121094, low: 55.810001373291016, close: 55.900001525878906 },
 { time: '2026-10-26', open: 56, high: 56.349998474121094, low: 55.97999954223633, close: 56.02000045776367 },
+{ time: '2026-10-27', open: 56.27000045776367, high: 56.31999969482422, low: 55.75, close: 55.880001068115234 },
  ]);
 
 const sma50_XLF = chart_XLF.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -3809,6 +4291,7 @@ sma50_XLF.setData([ { time: '2025-01-08', value: 49.12 },
 { time: '2026-10-22', value: 56.12 },
 { time: '2026-10-23', value: 56.08 },
 { time: '2026-10-26', value: 56.03 },
+{ time: '2026-10-27', value: 56 },
  ]);
 
 const sma200_XLF = chart_XLF.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -4113,6 +4596,7 @@ sma200_XLF.setData([ { time: '2025-08-15', value: 50.11 },
 { time: '2026-10-22', value: 53.69 },
 { time: '2026-10-23', value: 53.69 },
 { time: '2026-10-26', value: 53.69 },
+{ time: '2026-10-27', value: 53.69 },
  ]);
 
 const volume_XLF = chart_XLF.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -4617,6 +5101,7 @@ volume_XLF.setData([ { time: '2024-10-28', value: 31415900, color: '#26a69a' },
 { time: '2026-10-22', value: 32580900, color: '#26a69a' },
 { time: '2026-10-23', value: 28566600, color: '#ef5350' },
 { time: '2026-10-26', value: 23031900, color: '#26a69a' },
+{ time: '2026-10-27', value: 27229800, color: '#ef5350' },
  ]);
 
 const rsi_XLF = chart_XLF.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -5110,6 +5595,7 @@ rsi_XLF.setData([ { time: '2024-11-15', value: 67.92 },
 { time: '2026-10-22', value: 63.15 },
 { time: '2026-10-23', value: 55.05 },
 { time: '2026-10-26', value: 56.03 },
+{ time: '2026-10-27', value: 54.54 },
  ]);
 rsi_XLF.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLF.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -5680,6 +6166,7 @@ candle_XLV.setData([ { time: '2024-10-28', open: 149.00999450683594, high: 149.4
 { time: '2026-10-22', open: 179.66000366210938, high: 182.25, low: 178.9499969482422, close: 181.3000030517578 },
 { time: '2026-10-23', open: 180.39999389648438, high: 180.74000549316406, low: 178.7100067138672, close: 179.27999877929688 },
 { time: '2026-10-26', open: 179.77000427246094, high: 181.1699981689453, low: 178.4600067138672, close: 179.27999877929688 },
+{ time: '2026-10-27', open: 178.33999633789062, high: 179.72000122070312, low: 177.92999267578125, close: 179.17999267578125 },
  ]);
 
 const sma50_XLV = chart_XLV.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -6134,6 +6621,7 @@ sma50_XLV.setData([ { time: '2025-01-08', value: 143.44 },
 { time: '2026-10-22', value: 170.9 },
 { time: '2026-10-23', value: 171.12 },
 { time: '2026-10-26', value: 171.36 },
+{ time: '2026-10-27', value: 171.6 },
  ]);
 
 const sma200_XLV = chart_XLV.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -6438,6 +6926,7 @@ sma200_XLV.setData([ { time: '2025-08-15', value: 139.87 },
 { time: '2026-10-22', value: 157.97 },
 { time: '2026-10-23', value: 158.07 },
 { time: '2026-10-26', value: 158.18 },
+{ time: '2026-10-27', value: 158.29 },
  ]);
 
 const volume_XLV = chart_XLV.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -6942,6 +7431,7 @@ volume_XLV.setData([ { time: '2024-10-28', value: 4923500, color: '#ef5350' },
 { time: '2026-10-22', value: 10120300, color: '#26a69a' },
 { time: '2026-10-23', value: 7722300, color: '#ef5350' },
 { time: '2026-10-26', value: 7815600, color: '#ef5350' },
+{ time: '2026-10-27', value: 7831300, color: '#26a69a' },
  ]);
 
 const rsi_XLV = chart_XLV.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -7435,6 +7925,7 @@ rsi_XLV.setData([ { time: '2024-11-15', value: 27.56 },
 { time: '2026-10-22', value: 69.92 },
 { time: '2026-10-23', value: 64.01 },
 { time: '2026-10-26', value: 64.01 },
+{ time: '2026-10-27', value: 63.7 },
  ]);
 rsi_XLV.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLV.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -8005,6 +8496,7 @@ candle_XLC.setData([ { time: '2024-10-28', open: 91.72000122070312, high: 91.769
 { time: '2026-10-22', open: 107.86000061035156, high: 108.22000122070312, low: 106.73500061035156, close: 107.41999816894531 },
 { time: '2026-10-23', open: 105.93499755859375, high: 106.76000213623047, low: 105.49500274658203, close: 105.51000213623047 },
 { time: '2026-10-26', open: 105.03199768066406, high: 105.22000122070312, low: 103.54499816894531, close: 103.8499984741211 },
+{ time: '2026-10-27', open: 103.56999969482422, high: 104.11000061035156, low: 103.19999694824219, close: 103.58000183105469 },
  ]);
 
 const sma50_XLC = chart_XLC.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -8459,6 +8951,7 @@ sma50_XLC.setData([ { time: '2025-01-08', value: 97.41 },
 { time: '2026-10-22', value: 111.74 },
 { time: '2026-10-23', value: 111.6 },
 { time: '2026-10-26', value: 111.42 },
+{ time: '2026-10-27', value: 111.28 },
  ]);
 
 const sma200_XLC = chart_XLC.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -8763,6 +9256,7 @@ sma200_XLC.setData([ { time: '2025-08-15', value: 100.17 },
 { time: '2026-10-22', value: 113.34 },
 { time: '2026-10-23', value: 113.28 },
 { time: '2026-10-26', value: 113.21 },
+{ time: '2026-10-27', value: 113.14 },
  ]);
 
 const volume_XLC = chart_XLC.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -9267,6 +9761,7 @@ volume_XLC.setData([ { time: '2024-10-28', value: 2079700, color: '#ef5350' },
 { time: '2026-10-22', value: 6109100, color: '#ef5350' },
 { time: '2026-10-23', value: 5409100, color: '#ef5350' },
 { time: '2026-10-26', value: 9375500, color: '#ef5350' },
+{ time: '2026-10-27', value: 7405100, color: '#26a69a' },
  ]);
 
 const rsi_XLC = chart_XLC.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -9760,6 +10255,7 @@ rsi_XLC.setData([ { time: '2024-11-15', value: 66.91 },
 { time: '2026-10-22', value: 37.3 },
 { time: '2026-10-23', value: 32.83 },
 { time: '2026-10-26', value: 29.53 },
+{ time: '2026-10-27', value: 29.01 },
  ]);
 rsi_XLC.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLC.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -10330,6 +10826,7 @@ candle_XLY.setData([ { time: '2024-10-28', open: 101.19499969482422, high: 101.5
 { time: '2026-10-22', open: 114.29000091552734, high: 115.69000244140625, low: 114.16999816894531, close: 115.01000213623047 },
 { time: '2026-10-23', open: 114.05999755859375, high: 114.0999984741211, low: 112.83000183105469, close: 113.0999984741211 },
 { time: '2026-10-26', open: 113.95999908447266, high: 115.4000015258789, low: 113.81999969482422, close: 114.26000213623047 },
+{ time: '2026-10-27', open: 114.8499984741211, high: 115.66999816894531, low: 114.30999755859375, close: 115.44999694824219 },
  ]);
 
 const sma50_XLY = chart_XLY.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -10784,6 +11281,7 @@ sma50_XLY.setData([ { time: '2025-01-08', value: 110.5 },
 { time: '2026-10-22', value: 113.54 },
 { time: '2026-10-23', value: 113.44 },
 { time: '2026-10-26', value: 113.36 },
+{ time: '2026-10-27', value: 113.33 },
  ]);
 
 const sma200_XLY = chart_XLY.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -11088,6 +11586,7 @@ sma200_XLY.setData([ { time: '2025-08-15', value: 107.42 },
 { time: '2026-10-22', value: 115.8 },
 { time: '2026-10-23', value: 115.76 },
 { time: '2026-10-26', value: 115.72 },
+{ time: '2026-10-27', value: 115.67 },
  ]);
 
 const volume_XLY = chart_XLY.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -11592,6 +12091,7 @@ volume_XLY.setData([ { time: '2024-10-28', value: 4102400, color: '#ef5350' },
 { time: '2026-10-22', value: 8039300, color: '#26a69a' },
 { time: '2026-10-23', value: 6418800, color: '#ef5350' },
 { time: '2026-10-26', value: 6756400, color: '#26a69a' },
+{ time: '2026-10-27', value: 5892400, color: '#26a69a' },
  ]);
 
 const rsi_XLY = chart_XLY.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -12085,6 +12585,7 @@ rsi_XLY.setData([ { time: '2024-11-15', value: 65.97 },
 { time: '2026-10-22', value: 59.9 },
 { time: '2026-10-23', value: 50.96 },
 { time: '2026-10-26', value: 55.32 },
+{ time: '2026-10-27', value: 59.32 },
  ]);
 rsi_XLY.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLY.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -12655,6 +13156,7 @@ candle_XLP.setData([ { time: '2024-10-28', open: 81.37999725341797, high: 81.559
 { time: '2026-10-22', open: 87.9800033569336, high: 89.98999786376953, low: 87.86000061035156, close: 89.98999786376953 },
 { time: '2026-10-23', open: 89.58999633789062, high: 89.94999694824219, low: 88.05999755859375, close: 88.26000213623047 },
 { time: '2026-10-26', open: 88.08000183105469, high: 88.7699966430664, low: 87.5999984741211, close: 87.95999908447266 },
+{ time: '2026-10-27', open: 87.37000274658203, high: 87.62000274658203, low: 87, close: 87.1500015258789 },
  ]);
 
 const sma50_XLP = chart_XLP.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -13109,6 +13611,7 @@ sma50_XLP.setData([ { time: '2025-01-08', value: 80.65 },
 { time: '2026-10-22', value: 84.33 },
 { time: '2026-10-23', value: 84.38 },
 { time: '2026-10-26', value: 84.42 },
+{ time: '2026-10-27', value: 84.47 },
  ]);
 
 const sma200_XLP = chart_XLP.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -13413,6 +13916,7 @@ sma200_XLP.setData([ { time: '2025-08-15', value: 80.73 },
 { time: '2026-10-22', value: 84.21 },
 { time: '2026-10-23', value: 84.27 },
 { time: '2026-10-26', value: 84.32 },
+{ time: '2026-10-27', value: 84.36 },
  ]);
 
 const volume_XLP = chart_XLP.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -13917,6 +14421,7 @@ volume_XLP.setData([ { time: '2024-10-28', value: 5714200, color: '#ef5350' },
 { time: '2026-10-22', value: 22936100, color: '#26a69a' },
 { time: '2026-10-23', value: 19854900, color: '#ef5350' },
 { time: '2026-10-26', value: 13641700, color: '#ef5350' },
+{ time: '2026-10-27', value: 12845800, color: '#ef5350' },
  ]);
 
 const rsi_XLP = chart_XLP.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -14410,6 +14915,7 @@ rsi_XLP.setData([ { time: '2024-11-15', value: 39.5 },
 { time: '2026-10-22', value: 74.34 },
 { time: '2026-10-23', value: 63.88 },
 { time: '2026-10-26', value: 62.25 },
+{ time: '2026-10-27', value: 57.94 },
  ]);
 rsi_XLP.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLP.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -14980,6 +15486,7 @@ candle_XLE.setData([ { time: '2024-10-28', open: 43.93000030517578, high: 44.630
 { time: '2026-10-22', open: 68.73999786376953, high: 68.77999877929688, low: 66.29000091552734, close: 67.56999969482422 },
 { time: '2026-10-23', open: 68.08000183105469, high: 69.72000122070312, low: 67.76000213623047, close: 69.33000183105469 },
 { time: '2026-10-26', open: 68.7300033569336, high: 69.86000061035156, low: 68.62000274658203, close: 69.63999938964844 },
+{ time: '2026-10-27', open: 69.27999877929688, high: 69.69999694824219, low: 68.05000305175781, close: 68.20999908447266 },
  ]);
 
 const sma50_XLE = chart_XLE.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -15434,6 +15941,7 @@ sma50_XLE.setData([ { time: '2025-01-08', value: 45.23 },
 { time: '2026-10-22', value: 64.17 },
 { time: '2026-10-23', value: 64.34 },
 { time: '2026-10-26', value: 64.49 },
+{ time: '2026-10-27', value: 64.61 },
  ]);
 
 const sma200_XLE = chart_XLE.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -15738,6 +16246,7 @@ sma200_XLE.setData([ { time: '2025-08-15', value: 43.78 },
 { time: '2026-10-22', value: 58.06 },
 { time: '2026-10-23', value: 58.18 },
 { time: '2026-10-26', value: 58.3 },
+{ time: '2026-10-27', value: 58.4 },
  ]);
 
 const volume_XLE = chart_XLE.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -16242,6 +16751,7 @@ volume_XLE.setData([ { time: '2024-10-28', value: 24228000, color: '#26a69a' },
 { time: '2026-10-22', value: 41617500, color: '#ef5350' },
 { time: '2026-10-23', value: 38656200, color: '#26a69a' },
 { time: '2026-10-26', value: 32304500, color: '#26a69a' },
+{ time: '2026-10-27', value: 31600200, color: '#ef5350' },
  ]);
 
 const rsi_XLE = chart_XLE.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -16735,6 +17245,7 @@ rsi_XLE.setData([ { time: '2024-11-15', value: 74.02 },
 { time: '2026-10-22', value: 63.11 },
 { time: '2026-10-23', value: 69.39 },
 { time: '2026-10-26', value: 70.35 },
+{ time: '2026-10-27', value: 60.88 },
  ]);
 rsi_XLE.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLE.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -17305,6 +17816,7 @@ candle_XLI.setData([ { time: '2024-10-28', open: 136.0800018310547, high: 136.39
 { time: '2026-10-22', open: 166.89999389648438, high: 167.36000061035156, low: 164.77000427246094, close: 166.72999572753906 },
 { time: '2026-10-23', open: 165.00999450683594, high: 165.30999755859375, low: 162.97000122070312, close: 164.6199951171875 },
 { time: '2026-10-26', open: 165.52000427246094, high: 167.25999450683594, low: 165.44000244140625, close: 166.9600067138672 },
+{ time: '2026-10-27', open: 167.85000610351562, high: 168.2100067138672, low: 166.92999267578125, close: 167.9199981689453 },
  ]);
 
 const sma50_XLI = chart_XLI.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -17759,6 +18271,7 @@ sma50_XLI.setData([ { time: '2025-01-08', value: 137.67 },
 { time: '2026-10-22', value: 172.66 },
 { time: '2026-10-23', value: 172.24 },
 { time: '2026-10-26', value: 171.85 },
+{ time: '2026-10-27', value: 171.48 },
  ]);
 
 const sma200_XLI = chart_XLI.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -18063,6 +18576,7 @@ sma200_XLI.setData([ { time: '2025-08-15', value: 138.86 },
 { time: '2026-10-22', value: 173.14 },
 { time: '2026-10-23', value: 173.17 },
 { time: '2026-10-26', value: 173.2 },
+{ time: '2026-10-27', value: 173.23 },
  ]);
 
 const volume_XLI = chart_XLI.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -18567,6 +19081,7 @@ volume_XLI.setData([ { time: '2024-10-28', value: 7132200, color: '#ef5350' },
 { time: '2026-10-22', value: 10754800, color: '#ef5350' },
 { time: '2026-10-23', value: 7237100, color: '#ef5350' },
 { time: '2026-10-26', value: 6706300, color: '#26a69a' },
+{ time: '2026-10-27', value: 6284300, color: '#26a69a' },
  ]);
 
 const rsi_XLI = chart_XLI.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -19060,6 +19575,7 @@ rsi_XLI.setData([ { time: '2024-11-15', value: 59.19 },
 { time: '2026-10-22', value: 40.46 },
 { time: '2026-10-23', value: 35.15 },
 { time: '2026-10-26', value: 43.94 },
+{ time: '2026-10-27', value: 47.11 },
  ]);
 rsi_XLI.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLI.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -19630,6 +20146,7 @@ candle_XLB.setData([ { time: '2024-10-28', open: 47.209999084472656, high: 47.43
 { time: '2026-10-22', open: 51.029998779296875, high: 51.709999084472656, low: 50.7599983215332, close: 51.689998626708984 },
 { time: '2026-10-23', open: 51.40999984741211, high: 51.66999816894531, low: 50.83000183105469, close: 51.310001373291016 },
 { time: '2026-10-26', open: 51.41999816894531, high: 51.63999938964844, low: 51.310001373291016, close: 51.380001068115234 },
+{ time: '2026-10-27', open: 51.22999954223633, high: 51.880001068115234, low: 51.209999084472656, close: 51.779998779296875 },
  ]);
 
 const sma50_XLB = chart_XLB.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -20084,6 +20601,7 @@ sma50_XLB.setData([ { time: '2025-01-08', value: 45.25 },
 { time: '2026-10-22', value: 51.04 },
 { time: '2026-10-23', value: 51.02 },
 { time: '2026-10-26', value: 50.99 },
+{ time: '2026-10-27', value: 50.98 },
  ]);
 
 const sma200_XLB = chart_XLB.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -20388,6 +20906,7 @@ sma200_XLB.setData([ { time: '2025-08-15', value: 43.95 },
 { time: '2026-10-22', value: 50.96 },
 { time: '2026-10-23', value: 50.98 },
 { time: '2026-10-26', value: 51 },
+{ time: '2026-10-27', value: 51.02 },
  ]);
 
 const volume_XLB = chart_XLB.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -20892,6 +21411,7 @@ volume_XLB.setData([ { time: '2024-10-28', value: 7701600, color: '#26a69a' },
 { time: '2026-10-22', value: 9619400, color: '#26a69a' },
 { time: '2026-10-23', value: 8266700, color: '#ef5350' },
 { time: '2026-10-26', value: 9512200, color: '#ef5350' },
+{ time: '2026-10-27', value: 11536100, color: '#26a69a' },
  ]);
 
 const rsi_XLB = chart_XLB.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -21385,6 +21905,7 @@ rsi_XLB.setData([ { time: '2024-11-15', value: 31.48 },
 { time: '2026-10-22', value: 64.74 },
 { time: '2026-10-23', value: 59.49 },
 { time: '2026-10-26', value: 60.13 },
+{ time: '2026-10-27', value: 63.67 },
  ]);
 rsi_XLB.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLB.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -21955,6 +22476,7 @@ candle_XLRE.setData([ { time: '2024-10-28', open: 44.459999084472656, high: 44.6
 { time: '2026-10-22', open: 42.029998779296875, high: 42.57500076293945, low: 41.97999954223633, close: 42.52000045776367 },
 { time: '2026-10-23', open: 43.15999984741211, high: 43.209999084472656, low: 42.349998474121094, close: 42.56999969482422 },
 { time: '2026-10-26', open: 42.56800079345703, high: 43.0099983215332, low: 42.56800079345703, close: 42.79999923706055 },
+{ time: '2026-10-27', open: 42.54499816894531, high: 42.689998626708984, low: 42.2599983215332, close: 42.439998626708984 },
  ]);
 
 const sma50_XLRE = chart_XLRE.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -22409,6 +22931,7 @@ sma50_XLRE.setData([ { time: '2025-01-08', value: 42.72 },
 { time: '2026-10-22', value: 42.93 },
 { time: '2026-10-23', value: 42.87 },
 { time: '2026-10-26', value: 42.83 },
+{ time: '2026-10-27', value: 42.78 },
  ]);
 
 const sma200_XLRE = chart_XLRE.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -22713,6 +23236,7 @@ sma200_XLRE.setData([ { time: '2025-08-15', value: 41.79 },
 { time: '2026-10-22', value: 43.28 },
 { time: '2026-10-23', value: 43.29 },
 { time: '2026-10-26', value: 43.3 },
+{ time: '2026-10-27', value: 43.31 },
  ]);
 
 const volume_XLRE = chart_XLRE.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -23217,6 +23741,7 @@ volume_XLRE.setData([ { time: '2024-10-28', value: 3129100, color: '#ef5350' },
 { time: '2026-10-22', value: 10764200, color: '#26a69a' },
 { time: '2026-10-23', value: 9570600, color: '#ef5350' },
 { time: '2026-10-26', value: 9322000, color: '#26a69a' },
+{ time: '2026-10-27', value: 7226000, color: '#ef5350' },
  ]);
 
 const rsi_XLRE = chart_XLRE.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -23710,6 +24235,7 @@ rsi_XLRE.setData([ { time: '2024-11-15', value: 41.23 },
 { time: '2026-10-22', value: 55.04 },
 { time: '2026-10-23', value: 55.53 },
 { time: '2026-10-26', value: 57.82 },
+{ time: '2026-10-27', value: 53.2 },
  ]);
 rsi_XLRE.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLRE.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -24280,6 +24806,7 @@ candle_XLU.setData([ { time: '2024-10-28', open: 40.404998779296875, high: 40.70
 { time: '2026-10-22', open: 42.11000061035156, high: 42.880001068115234, low: 42.0099983215332, close: 42.869998931884766 },
 { time: '2026-10-23', open: 42.72999954223633, high: 42.810001373291016, low: 42.38999938964844, close: 42.560001373291016 },
 { time: '2026-10-26', open: 42.529998779296875, high: 42.81999969482422, low: 42.470001220703125, close: 42.54999923706055 },
+{ time: '2026-10-27', open: 42.63999938964844, high: 42.88999938964844, low: 42.5099983215332, close: 42.849998474121094 },
  ]);
 
 const sma50_XLU = chart_XLU.addLineSeries({ color: '#2196f3', lineWidth: 2, title: 'SMA 50' });
@@ -24734,6 +25261,7 @@ sma50_XLU.setData([ { time: '2025-01-08', value: 39.26 },
 { time: '2026-10-22', value: 41.9 },
 { time: '2026-10-23', value: 41.87 },
 { time: '2026-10-26', value: 41.83 },
+{ time: '2026-10-27', value: 41.81 },
  ]);
 
 const sma200_XLU = chart_XLU.addLineSeries({ color: '#ff9800', lineWidth: 2, title: 'SMA 200' });
@@ -25038,6 +25566,7 @@ sma200_XLU.setData([ { time: '2025-08-15', value: 39.88 },
 { time: '2026-10-22', value: 44.29 },
 { time: '2026-10-23', value: 44.3 },
 { time: '2026-10-26', value: 44.3 },
+{ time: '2026-10-27', value: 44.3 },
  ]);
 
 const volume_XLU = chart_XLU.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'volume_scale' });
@@ -25542,6 +26071,7 @@ volume_XLU.setData([ { time: '2024-10-28', value: 14622800, color: '#26a69a' },
 { time: '2026-10-22', value: 29970300, color: '#26a69a' },
 { time: '2026-10-23', value: 18692600, color: '#ef5350' },
 { time: '2026-10-26', value: 13968200, color: '#26a69a' },
+{ time: '2026-10-27', value: 16929800, color: '#26a69a' },
  ]);
 
 const rsi_XLU = chart_XLU.addLineSeries({ color: '#9c27b0', lineWidth: 2, title: 'RSI(14)', priceScaleId: 'rsi_scale' });
@@ -26035,6 +26565,7 @@ rsi_XLU.setData([ { time: '2024-11-15', value: 42.52 },
 { time: '2026-10-22', value: 63.62 },
 { time: '2026-10-23', value: 59.86 },
 { time: '2026-10-26', value: 59.73 },
+{ time: '2026-10-27', value: 62.23 },
  ]);
 rsi_XLU.createPriceLine({ price: 70, color: '#ef5350', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '70 OB' });
 rsi_XLU.createPriceLine({ price: 30, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '30 OS' });
@@ -26094,6 +26625,126 @@ activeCharts.push({ chart: chart_XLU, container: container_XLU });
                     item.chart.applyOptions({ width: item.container.clientWidth });
                 });
             });
+
+            // --- Core Engine Setup for RRG Rendering ---
+const canvas = document.getElementById('rrgCanvas');
+const ctx = canvas.getContext('2d');
+let currentRrgTimeframe = 'weeks';
+
+window.updateRrgTimeframe = function(timeframe) {
+    currentRrgTimeframe = timeframe;
+    drawRrg();
+};
+
+function drawRrg() {
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Clear the canvas view space
+    ctx.fillStyle = '#131722';
+    ctx.fillRect(0, 0, w, h);
+
+    // Define bounds mapping 80 to 120 scale bounds across the canvas matrix width
+    //const minScale = 80, maxScale = 120;
+    const minScale = rrgDataPool[currentRrgTimeframe]['scaling'].minScale;
+    const maxScale = rrgDataPool[currentRrgTimeframe]['scaling'].maxScale;
+
+    const toCanvasX = val => ((val - minScale) / (maxScale - minScale)) * w;
+    const toCanvasY = val => h - (((val - minScale) / (maxScale - minScale)) * h);
+
+    const midX = toCanvasX(100);
+    const midY = toCanvasY(100);
+
+    // Draw Quadrant Background Fill Overlays
+    ctx.fillStyle = 'rgba(38, 166, 154, 0.02)'; // Leading (Top-Right)
+    ctx.fillRect(midX, 0, w - midX, midY);
+    ctx.fillStyle = 'rgba(255, 202, 40, 0.02)'; // Weakening (Bottom-Right)
+    ctx.fillRect(midX, midY, w - midX, h - midY);
+    ctx.fillStyle = 'rgba(239, 83, 80, 0.02)';   // Lagging (Bottom-Left)
+    ctx.fillRect(0, midY, midX, h - midY);
+    ctx.fillStyle = 'rgba(33, 150, 243, 0.02)';  // Improving (Top-Left)
+    ctx.fillRect(0, 0, midX, midY);
+
+    // Render Axis Crosshairs
+    ctx.strokeStyle = '#2b2b3a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, midY); ctx.lineTo(w, midY);
+    ctx.moveTo(midX, 0); ctx.lineTo(midX, h);
+    ctx.stroke();
+
+    // Render Inner Circular Reference Ring Grid Lines
+    ctx.strokeStyle = '#1e222d';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    for(let r = 50; r <= 200; r += 50) {
+        ctx.beginPath();
+        ctx.arc(midX, midY, r, 0, 2 * Math.PI);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Draw Boundary Matrix Text Labels
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#26a69a'; ctx.fillText('LEADING', w - 75, 25);
+    ctx.fillStyle = '#ffca28'; ctx.fillText('WEAKENING', w - 90, h - 20);
+    ctx.fillStyle = '#ef5350'; ctx.fillText('LAGGING', 20, h - 20);
+    ctx.fillStyle = '#2196f3'; ctx.fillText('IMPROVING', 20, 25);
+
+    // Fetch active timeframe array selection dictionary pool data records
+    const activePool = rrgDataPool[currentRrgTimeframe];
+    const colorsPool = ['#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#009688', '#4caf50', '#ff5722'];
+    let colorIdx = 0;
+
+    for (const [ticker, points] of Object.entries(activePool)) {
+        if (!points || points.length === 0) continue;
+
+        const strokeColor = colorsPool[colorIdx % colorsPool.length];
+        colorIdx++;
+
+        // Draw Historical Trailing Navigation Vector Paths (Tails)
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(points[0].ratio), toCanvasY(points[0].momentum));
+
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(toCanvasX(points[i].ratio), toCanvasY(points[i].momentum));
+        }
+        ctx.stroke();
+
+        // Render Smaller Trace Nodes along the historic line path segment intervals
+        for (let i = 0; i < points.length - 1; i++) {
+            ctx.fillStyle = strokeColor;
+            ctx.beginPath();
+            ctx.arc(toCanvasX(points[i].ratio), toCanvasY(points[i].momentum), 3, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // Draw Leading Node Arrowhead Head on the current terminal point asset coordinates
+        const head = points[points.length - 1];
+        const headX = toCanvasX(head.ratio);
+        const headY = toCanvasY(head.momentum);
+        const prev = points[points.length - 2];
+        const angle = Math.atan2(headY - toCanvasY(prev.momentum), headX - toCanvasX(prev.ratio));
+
+        ctx.fillStyle = strokeColor;
+        ctx.beginPath();
+        ctx.moveTo(headX, headY);
+        ctx.lineTo(headX - 10 * Math.cos(angle - Math.PI/6), headY - 10 * Math.sin(angle - Math.PI/6));
+        ctx.lineTo(headX - 10 * Math.cos(angle + Math.PI/6), headY - 10 * Math.sin(angle + Math.PI/6));
+        ctx.fill();
+
+        // Draw Ticker String Text Label
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(ticker, headX + 8, headY - 4);
+    }
+}
+
+// Fire initial paint sequence on page load
+drawRrg();
+
         });
     </script>
 </body>
